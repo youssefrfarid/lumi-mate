@@ -10,6 +10,7 @@ import { Image } from "expo-image";
 import { AntDesign } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
 import { FontAwesome6 } from "@expo/vector-icons";
+import * as Speech from "expo-speech";
 
 export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -37,25 +38,33 @@ export default function CameraScreen() {
 
   const takePicture = async () => {
     console.log("Taking picture...");
-    const photo = await cameraRef.current?.takePictureAsync({ base64: true });
+    const photo = await cameraRef.current?.takePictureAsync({ base64: false });
     if (photo) {
-      // Send the base64 image to your API endpoint.
-      if (photo.base64) {
-        try {
-          console.log("Uploading image...");
-          const response = await fetch(
-            "https://963e-35-243-161-15.ngrok-free.app/upload",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ image: photo.base64 }),
-            }
-          );
-          const result = await response.json();
-          console.log("Upload successful:", result);
-        } catch (error) {
-          console.error("Error uploading image:", error);
-        }
+      // Create a new FormData instance
+      const formData = new FormData();
+      const file: any = {
+        uri: photo.uri,
+        name: "photo.jpg",
+        type: "image/jpeg",
+      };
+      formData.append("image", file);
+
+      try {
+        console.log("Uploading image...");
+        const response = await fetch("http://192.168.1.110:8000/continue", {
+          method: "POST",
+          body: formData,
+          // It's best not to manually set the Content-Type header here.
+        });
+        const result = await response.json();
+        Speech.speak(result.response, {
+          language: "en-US", // Optional: Set the language
+          pitch: 1.0, // Optional: Adjust the pitch
+          rate: 1.0, // Optional: Adjust the speaking rate
+        });
+        console.log("Upload successful:", result);
+      } catch (error) {
+        console.error("Error uploading image:", error);
       }
       // Optionally, show a preview of the taken photo.
       setImageUri(photo.uri);
